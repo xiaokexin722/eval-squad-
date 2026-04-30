@@ -1,0 +1,2 @@
+# eval-squad-
+A seminar
