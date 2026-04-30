@@ -3,87 +3,139 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>评价朋友团</title>
+  <title>评价朋友团 · 9人陪审团</title>
   <style>
     body{font-family:sans-serif;max-width:500px;margin:2rem auto;padding:0 1rem;background:#f9f6f0}
-    h1{text-align:center;font-size:1.8rem}
-    textarea{width:100%;height:100px;margin:1rem 0;padding:1rem;font-size:1rem;border-radius:1rem;border:1px solid #ddd}
+    h1{text-align:center;font-size:1.8rem;margin-bottom:0.2rem}
+    .sub{text-align:center;color:#888;margin-bottom:1.5rem}
+    textarea{width:100%;height:100px;margin:1rem 0;padding:1rem;font-size:1rem;border-radius:1rem;border:1px solid #ddd;box-sizing:border-box}
     .roles{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem}
-    .role{background:#fff;border:2px solid #ccc;border-radius:2rem;padding:0.4rem 1rem;cursor:pointer;user-select:none}
+    .role{background:#fff;border:2px solid #ccc;border-radius:2rem;padding:0.4rem 1rem;cursor:pointer;user-select:none;font-size:0.9rem}
     .role.selected{border-color:#ff914d;background:#fff3e6}
-    button{width:100%;padding:0.8rem;background:#ff914d;color:#fff;border:none;border-radius:2rem;font-size:1.2rem;cursor:pointer;margin:1rem 0}
-    .card{background:#fff;border-radius:1rem;padding:1.5rem;margin:1rem 0;box-shadow:0 4px 12px rgba(0,0,0,0.05)}
-    .verdict{font-size:1.4rem;text-align:center;font-weight:bold;color:#ff6b00;margin:1rem 0}
-    .eval-item{display:flex;align-items:center;gap:0.5rem;margin:0.8rem 0}
-    .stars{color:#f5a623}
+    button{width:100%;padding:0.8rem;background:#ff914d;color:#fff;border:none;border-radius:2rem;font-size:1.2rem;cursor:pointer;margin:1rem 0;font-weight:bold}
+    button:active{background:#e07b3a}
+    .card{background:#fff;border-radius:1rem;padding:1.2rem;margin:0.8rem 0;box-shadow:0 4px 12px rgba(0,0,0,0.05);border-left:4px solid #ff914d}
+    .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem}
+    .role-name{font-weight:bold;font-size:1.1rem}
+    .stars{color:#f5a623;font-size:1.2rem}
+    .comment{color:#333;line-height:1.6;font-style:italic}
+    .verdict-box{background:linear-gradient(135deg,#fff3e6,#ffe6cc);border-radius:1rem;padding:1.5rem;margin:1rem 0;text-align:center}
+    .verdict-score{font-size:2rem;font-weight:bold;color:#ff6b00}
+    .verdict-text{margin-top:0.5rem;color:#555;line-height:1.6}
     .loading{text-align:center;color:#888;padding:2rem}
   </style>
 </head>
 <body>
   <h1>🎭 评价朋友团</h1>
+  <div class="sub">召集 9 位朋友，为你评评理</div>
+
   <textarea id="eventInput" placeholder="比如：我今天上班迟到了半小时..."></textarea>
+
   <div class="roles" id="roleContainer"></div>
-  <button onclick="getEvaluations()">召集朋友团</button>
+
+  <button onclick="getEvaluations()">⚡ 召集全部朋友</button>
   <div id="result"></div>
 
   <script>
+    // 🎭 9人评论团设定
     const ROLES = [
-      {id:'elite',emoji:'💼',name:'社会精英',prompt:'你是一个看重效率和纪律的职场精英。请给出1-5星评价和犀利点评。'},
-      {id:'dog',emoji:'🐶',name:'快乐修狗',prompt:'你是一只无条件爱主人的金毛。请给出1-5星评价和治愈鼓励。'},
-      {id:'bestie',emoji:'👯',name:'毒舌闺蜜',prompt:'你是说话又损又暖的闺蜜。请给出1-5星评价和一针见血的吐槽。'},
-      {id:'moral',emoji:'⚖️',name:'道德法官',prompt:'你是正义感爆棚的道德守护者。请给出1-5星评价和严肃审视。'},
-      {id:'monk',emoji:'🧘',name:'佛系仙人',prompt:'你是看透一切的道长。请给出1-5星评价和禅意智慧。'}
+      { id:'elite', emoji:'💼', name:'社会精英',
+        prompt:'你是一个看重效率和纪律的职场精英。请用犀利、带商务术语的语气，给这件事打1-5星，并写一句辛辣点评。' },
+      { id:'dog', emoji:'🐶', name:'快乐修狗',
+        prompt:'你是一只永远开心的金毛狗狗。请用汪汪开头、充满治愈感的语气打1-5星，写一句无条件支持的话。' },
+      { id:'bestie', emoji:'👯', name:'毒舌闺蜜',
+        prompt:'你是那种“骂你最狠、护你最凶”的闺蜜。请用又损又暖的语气打1-5星，给一针见血的吐槽。' },
+      { id:'moral', emoji:'⚖️', name:'道德法官',
+        prompt:'你是一个严肃的道德评判者，凡事都要上纲上线。请用带着道德审视的语气打1-5星，给出严肃评语。' },
+      { id:'monk', emoji:'🧘', name:'佛系仙人',
+        prompt:'你是一个看破红尘的道长。请用超脱的、打机锋的语气打1-5星，说一句充满禅意的话。' },
+      { id:'childhood', emoji:'🧸', name:'暖心发小',
+        prompt:'你是对方从小一起长大的朋友，永远偏心。请用温暖的、从回忆里找证据的语气打1-5星，说支持的话。' },
+      { id:'ai', emoji:'🤖', name:'理性AI',
+        prompt:'你是一个绝对客观的AI，一切用数据说话。请用精确的概率、统计术语打1-5星（可带小数），给冷冰冰的评语。' },
+      { id:'anticurl', emoji:'🌪️', name:'反卷达人',
+        prompt:'你是一个拒绝内卷、推崇躺平的人。请用慵懒、劝人放松的语气打1-5星，给一句反卷宣言。' },
+      { id:'foodie', emoji:'🍜', name:'吃货老饕',
+        prompt:'你喜欢把所有事情都比喻成食物。请用和美食相关的奇妙比喻打1-5星，给一句有锅气的评语。' }
     ];
-    let selected = new Set(ROLES.map(r=>r.id));
 
-    function renderRoles(){
-      document.getElementById('roleContainer').innerHTML = ROLES.map(r=>
+    let selected = new Set(ROLES.map(r => r.id));
+
+    function renderRoles() {
+      const container = document.getElementById('roleContainer');
+      container.innerHTML = ROLES.map(r =>
         `<span class="role selected" data-id="${r.id}">${r.emoji} ${r.name}</span>`
       ).join('');
-      document.querySelectorAll('.role').forEach(el=>{
-        el.onclick = ()=>{
+
+      document.querySelectorAll('.role').forEach(el => {
+        el.onclick = () => {
           const id = el.dataset.id;
-          if(selected.has(id)) selected.delete(id); else selected.add(id);
+          selected.has(id) ? selected.delete(id) : selected.add(id);
           el.classList.toggle('selected');
         };
       });
     }
     renderRoles();
 
-    async function getEvaluations(){
+    async function getEvaluations() {
       const event = document.getElementById('eventInput').value.trim();
-      if(!event) return alert('请输入一件事');
-      const activeRoles = ROLES.filter(r=>selected.has(r.id));
-      if(activeRoles.length===0) return alert('至少选择一个朋友');
-      
-      document.getElementById('result').innerHTML = '<div class="loading">朋友们正在讨论...</div>';
-      try{
-        const res = await fetch('/api/evaluate',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({event, roles:activeRoles.map(r=>({emoji:r.emoji,name:r.name,prompt:r.prompt}))})
+      if (!event) return alert('请输入一件事');
+      const activeRoles = ROLES.filter(r => selected.has(r.id));
+      if (activeRoles.length === 0) return alert('至少保留一位朋友哦');
+
+      document.getElementById('result').innerHTML = '<div class="loading">✨ 朋友们正在交头接耳...</div>';
+
+      try {
+        const res = await fetch('/api/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event,
+            roles: activeRoles.map(r => ({ emoji: r.emoji, name: r.name, prompt: r.prompt }))
+          })
         });
         const data = await res.json();
-        if(!res.ok) throw new Error(data.error||'出错了');
-        renderResult(data, activeRoles);
-      }catch(e){
-        document.getElementById('result').innerHTML = `<div class="card" style="color:red">${e.message}</div>`;
+        if (!res.ok) throw new Error(data.error || '网络出小差了');
+        renderResult(data);
+      } catch (e) {
+        document.getElementById('result').innerHTML = `<div class="card" style="color:red;border-left-color:red">⚠️ ${e.message}</div>`;
       }
     }
 
-    function renderResult(evaluations, roles){
-      const html = evaluations.map(ev=>`
+    function renderResult(evaluations) {
+      if (!Array.isArray(evaluations)) {
+        document.getElementById('result').innerHTML = `<div class="card">${JSON.stringify(evaluations)}</div>`;
+        return;
+      }
+      // 显示每个人的评价
+      let html = evaluations.map(ev => `
         <div class="card">
-          <div class="eval-item"><span>${ev.emoji} ${ev.role}</span><span class="stars">${'★'.repeat(ev.score)}${'☆'.repeat(5-ev.score)}</span></div>
-          <p>${ev.comment}</p>
+          <div class="card-header">
+            <span class="role-name">${ev.emoji} ${ev.role}</span>
+            <span class="stars">${'★'.repeat(Math.round(ev.score))}${'☆'.repeat(5 - Math.round(ev.score))} ${ev.score}星</span>
+          </div>
+          <div class="comment">“${ev.comment}”</div>
         </div>
       `).join('');
-      const avg = (evaluations.reduce((s,ev)=>s+ev.score,0)/evaluations.length).toFixed(1);
-      document.getElementById('result').innerHTML = html + `
-        <div class="card">
-          <div class="verdict">综合评分 ${avg} 星</div>
-          <p style="text-align:center">${evaluations.verdict || ''}</p>
-        </div>`;
+
+      // 计算平均分
+      const avg = (evaluations.reduce((s, ev) => s + parseFloat(ev.score), 0) / evaluations.length).toFixed(1);
+
+      // 获取综合结论（假设AI返回了verdict字段，或者我们在最后加一个综合字段）
+      // 这里我们可以在AI返回中要求包含verdict，如果没有就自己生成一句
+      let verdictText = '';
+      // 如果第一个评价对象有verdict属性就取它，否则用默认
+      const verdictObj = evaluations.find(e => e.verdict);
+      if (verdictObj) verdictText = verdictObj.verdict;
+
+      html += `
+        <div class="verdict-box">
+          <div class="verdict-score">🎯 综合评分 ${avg} 星</div>
+          <div class="verdict-text">${verdictText || '朋友们吵了一架，最终给出了这个分数……'}</div>
+        </div>
+      `;
+
+      document.getElementById('result').innerHTML = html;
     }
   </script>
 </body>
