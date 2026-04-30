@@ -23,14 +23,14 @@ export default async function handler(req, res) {
   const userMessage = `事件：${event}\n参与评价的角色：${roles.map(r => `${r.emoji} ${r.name} (人设：${r.prompt})`).join('\n')}`;
 
   try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek-ai/DeepSeek-V3.1',
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: userMessage }
@@ -58,10 +58,8 @@ export default async function handler(req, res) {
       else throw new Error('返回格式异常');
     }
 
-    // 整理成前端需要的数组形式，并附上verdict
     const evaluations = parsed.evaluations || [];
     const verdict = parsed.verdict || '';
-    // 把verdict附加到第一个评价对象上（前端读取方便）
     if (evaluations.length > 0) {
       evaluations[0].verdict = verdict;
     }
