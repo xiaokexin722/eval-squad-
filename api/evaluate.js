@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3.1',
+        model: 'deepseek-v3',  // 换成了最简单的模型代号
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: userMessage }
@@ -40,11 +40,13 @@ export default async function handler(req, res) {
       })
     });
 
-    const data = await response.json();
+    // 如果硅基流动直接报错，就把错误原文显示出来
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || 'AI 请求失败' });
+      const errText = await response.text();
+      return res.status(response.status).json({ error: `硅基流动报错 (${response.status}): ${errText}` });
     }
 
+    const data = await response.json();
     const content = data.choices[0].message.content;
 
     // 解析AI返回的JSON
@@ -52,7 +54,6 @@ export default async function handler(req, res) {
     try {
       parsed = JSON.parse(content);
     } catch (e) {
-      // 如果没返回纯JSON，尝试从内容中提取
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
       else throw new Error('返回格式异常');
